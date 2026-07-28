@@ -80,10 +80,50 @@ def test_flipping_from_long_to_short_is_split_into_close_and_reverse():
 
 def test_dust_orders_are_skipped_but_full_exits_are_not():
     # A is 500 RUB below target (under the floor); B is gone from the master
-    # entirely and must be sold despite being small.
+    # entirely and must be sold despite being small (1 lot: the gradual step
+    # floor and a full close coincide here, so this holds either way).
     orders = plan_orders(master(A=0.95), slave(cash=500.0, A=95, B=1),
                          settings(min_order_value=1000.0))
     assert lots(orders) == {"B": -1}
+
+
+def test_mirror_liquidates_gradually_by_default():
+    # Master doesn't hold A at all. Default liquidation_mode is "gradual":
+    # v0.1's always-on 1-lot-per-cycle unwind, generalised to a percentage
+    # (25% here) so it scales with position size instead of taking forever on
+    # a large one. ceil(40 * 0.25) = 10 lots this cycle, not the whole 40.
+    orders = plan_orders(master(), slave(cash=0.0, A=40), settings())
+    assert lots(orders) == {"A": -10}
+    assert orders[0].reason == "liquidate (gradual)"
+
+
+def test_mirror_liquidation_full_mode_closes_in_one_order():
+    orders = plan_orders(master(), slave(cash=0.0, A=40), settings(liquidation_mode="full"))
+    assert lots(orders) == {"A": -40}
+    assert orders[0].reason == "liquidate"
+
+
+def test_liquidation_step_pct_100_is_equivalent_to_full():
+    orders = plan_orders(master(), slave(cash=0.0, A=40), settings(liquidation_step_pct=100.0))
+    assert lots(orders) == {"A": -40}
+
+
+def test_gradual_liquidation_floors_at_one_lot_and_reaches_zero():
+    # 25% of 3 lots is 0.75, rounded up to 1 — never zero, and never more than
+    # what's held, so a tiny position still empties out lot by lot.
+    orders = plan_orders(master(), slave(cash=0.0, A=3), settings())
+    assert lots(orders) == {"A": -1}
+
+
+def test_gradual_liquidation_converges_to_zero_in_finite_cycles():
+    current, cycles = 40, 0
+    while current != 0:
+        orders = plan_orders(master(), slave(cash=0.0, A=current), settings())
+        assert orders, "must keep issuing an order every cycle until fully closed"
+        current += lots(orders)["A"]
+        cycles += 1
+        assert cycles < 20, "gradual liquidation must terminate, not asymptote forever"
+    assert current == 0
 
 
 def test_margin_factor_shrinks_every_target():
@@ -127,10 +167,17 @@ def test_accumulate_trims_once_the_threshold_is_crossed():
     assert lots(orders) == {"A": -50}
 
 
-def test_accumulate_liquidates_what_the_master_left_in_full():
-    # v0.1 sold exactly one lot per cycle here; the whole position goes now.
-    orders = plan_orders(master(A=1.0), slave(cash=0.0, A=100, B=5), acc())
-    assert lots(orders) == {"B": -5}
+def test_accumulate_liquidates_gradually_by_default():
+    # B is gone from the master; default gradual mode eases out of it over a
+    # few cycles rather than dumping all 40 lots in one order.
+    orders = plan_orders(master(A=1.0), slave(cash=0.0, A=100, B=40), acc())
+    assert lots(orders) == {"B": -10}
+
+
+def test_accumulate_liquidation_full_mode_closes_in_one_order():
+    orders = plan_orders(master(A=1.0), slave(cash=0.0, A=100, B=40),
+                         acc(liquidation_mode="full"))
+    assert lots(orders) == {"B": -40}
 
 
 # --- free cash deployment ---------------------------------------------------

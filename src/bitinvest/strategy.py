@@ -15,13 +15,25 @@ Two modes, one shared sizing model.
 
     (v0.1 did the "buy new, never add to old" part by accident: its deadband
     `delta < delta*0.75 or delta > delta*1.25` is false for every positive
-    delta, so top-ups could not fire. Same behaviour, now on purpose and
-    without the accidental 1-lot-per-cycle liquidation drip.)
+    delta, so top-ups could not fire.)
+
+Both modes share how a position gets closed out entirely once the master no
+longer holds it at all (``settings.liquidation_mode``). v0.1 always sold such
+a position at a fixed 1 lot per cycle — not a deadband artifact this time, but
+a deliberate choice: don't dump a whole position in one order, especially
+right when an account first switches onto copy-trading and is carrying legacy
+positions the master never had. That behaviour is preserved as the "gradual"
+mode (default), generalised from a fixed lot to a percentage of what's held so
+it scales with position size; "full" closes it in one order instead, tracking
+the master faster at the cost of whatever a single large exit does to the fill
+price. See ``tools/ab_liquidation_policy.py`` and ``documentation/`` for the
+comparison — not decided here.
 """
 
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from typing import Mapping
 
@@ -139,6 +151,31 @@ def _emit(figi: str, meta: _Meta, current_lots: int, target_lots: int, reason: s
     ]
 
 
+def _liquidation_step(current_lots: int, settings: Settings) -> int:
+    """Lot count to land on this cycle when easing out of a position instead
+    of closing it in one order (``liquidation_mode = "gradual"``).
+
+    Shrinks whatever is currently held by ``liquidation_step_pct``, rounded up
+    and floored at 1 lot so the position always reaches zero in a finite
+    number of cycles no matter how small the percentage or how large the
+    position. At 25% a position is fully closed in about 4 cycles, more for
+    small holdings where the 1-lot floor dominates — that floor is v0.1's
+    fixed-1-lot behaviour, recovered as the limit for small or slow settings.
+    """
+    step = max(1, math.ceil(abs(current_lots) * settings.liquidation_step_pct / 100))
+    if step >= abs(current_lots):
+        return 0
+    return current_lots - step if current_lots > 0 else current_lots + step
+
+
+def _liquidation_target(current_lots: int, settings: Settings) -> tuple[int, str]:
+    """Where to land this cycle when fully exiting a position, and why."""
+    if settings.liquidation_mode == "full":
+        return 0, "liquidate"
+    wanted = _liquidation_step(current_lots, settings)
+    return wanted, ("liquidate" if wanted == 0 else "liquidate (gradual)")
+
+
 def _keep(order: Order, settings: Settings, liquidation: bool) -> bool:
     """Dust filter. Full exits are exempt: leaving a stub of something the
     master no longer holds is worse than paying commission on a small trade."""
@@ -176,8 +213,12 @@ def _plan_mirror(targets: Mapping[str, float], held: Mapping[str, int],
         target_lots = _lots_for(targets.get(figi, 0.0), meta[figi])
         current_lots = held.get(figi, 0)
         liquidation = target_lots == 0 and current_lots != 0
-        reason = "liquidate" if liquidation else "mirror"
-        for order in _emit(figi, meta[figi], current_lots, target_lots, reason):
+
+        wanted, reason = target_lots, "mirror"
+        if liquidation:
+            wanted, reason = _liquidation_target(current_lots, settings)
+
+        for order in _emit(figi, meta[figi], current_lots, wanted, reason):
             if _keep(order, settings, liquidation):
                 orders.append(order)
     return orders
@@ -198,8 +239,7 @@ def _plan_accumulate(targets: Mapping[str, float], held: Mapping[str, int],
         if current_lots == 0:
             reason, wanted = "new position", target_lots
         elif figi not in targets:
-            # The master is out of it entirely — the whole position goes, in one
-            # order rather than v0.1's one lot per cycle.
+            # The master is out of it entirely.
             reason, wanted = "liquidate", 0
         elif current_lots * target_lots < 0:
             # The master flipped long/short — a stance change, not drift.
@@ -211,6 +251,9 @@ def _plan_accumulate(targets: Mapping[str, float], held: Mapping[str, int],
             continue
 
         liquidation = wanted == 0 and current_lots != 0
+        if liquidation:
+            wanted, reason = _liquidation_target(current_lots, settings)
+
         for order in _emit(figi, meta[figi], current_lots, wanted, reason):
             if _keep(order, settings, liquidation):
                 orders.append(order)

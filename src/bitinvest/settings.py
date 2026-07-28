@@ -17,6 +17,7 @@ from bitinvest.config import REPO_ROOT
 MODES = ("mirror", "accumulate")
 LEVERAGE_POLICIES = ("cap", "normalize")
 CASH_POLICIES = ("underweight_first", "proportional", "never")
+LIQUIDATION_MODES = ("gradual", "full")
 
 
 @dataclass(frozen=True)
@@ -36,15 +37,35 @@ class Settings:
     min_order_value: float = 1000.0
     max_step_age_sec: float = 900.0
     dry_run: bool = False
+    # How a position the master no longer holds at all gets closed out.
+    # "gradual" was v0.1's actual behaviour (unconditionally, 1 lot/cycle,
+    # no toggle existed): don't dump a legacy or dropped-by-master position
+    # in one order, ease out of it over several cycles instead — the concern
+    # being market impact / bad fills on a single large exit, especially
+    # right when switching an account onto copy-trading with a pile of
+    # unrelated legacy positions. "full" closes it in one shot, which tracks
+    # the master faster but risks a worse execution price on size. Which one
+    # nets out better is exactly what tools/ab_liquidation_policy.py is for —
+    # not decided in this codebase, see documentation/.
+    liquidation_mode: str = "gradual"
+    # Share of the *currently held* lots closed per cycle under "gradual",
+    # rounded up, floored at 1 lot so a position always reaches zero in
+    # finite cycles. 25% -> roughly 4 cycles to fully exit, decelerating as
+    # the remainder shrinks (v0.1's fixed 1 lot/cycle is the limit as this
+    # approaches 0%, and is slower the bigger the position).
+    liquidation_step_pct: float = 25.0
     accumulate: AccumulateSettings = field(default_factory=AccumulateSettings)
 
     def __post_init__(self) -> None:
         _one_of("mode", self.mode, MODES)
         _one_of("leverage_policy", self.leverage_policy, LEVERAGE_POLICIES)
+        _one_of("liquidation_mode", self.liquidation_mode, LIQUIDATION_MODES)
         _one_of("accumulate.deploy_free_cash", self.accumulate.deploy_free_cash, CASH_POLICIES)
         _positive("target_leverage", self.target_leverage)
         _positive("margin_safety", self.margin_safety)
         _positive("max_step_age_sec", self.max_step_age_sec)
+        if not 0 < self.liquidation_step_pct <= 100:
+            raise ValueError("liquidation_step_pct must be in (0, 100]")
         if self.min_order_value < 0:
             raise ValueError("min_order_value must not be negative")
         if not 0 <= self.accumulate.cash_buffer_pct < 100:
