@@ -1,0 +1,127 @@
+BITinvest — License
+====================
+
+This repository has two license phases: a restricted phase while it is
+private, and MIT once the author makes it public. Below is the English
+version, followed by a full Russian translation.
+
+
+WHILE THIS REPOSITORY IS PRIVATE
+---------------------------------
+
+All rights reserved. No use, copying, modification, or distribution of any
+part of this code is permitted while this repository is private, except by
+the author (Alexey Legoshin, GitHub: alexlegoshin) or by a Claude Code
+session operating under the author's direct control.
+
+This software was never deployed or used in real trading during the
+"Tinkoff" era of this broker (i.e. before its rebrand to T-Bank). Any use of
+the ideas or code in this repository, at any time, must strictly follow
+T-Bank's current T-Invest API terms of service.
+
+Any editing of the code by anyone other than the author, or a Claude Code
+session under the author's direct control, is prohibited while the
+repository is private.
+
+
+ONCE THIS REPOSITORY IS MADE PUBLIC
+-------------------------------------
+
+From the date the author makes this repository public, the code is licensed
+under the MIT License:
+
+    MIT License
+
+    Copyright (c) <year of publication> Alexey Legoshin
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
+
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+DISCLAIMER
+----------
+
+This is a personal, unofficial project, not affiliated with, endorsed by,
+or associated with T-Bank / T-Investments in any way. It automates real
+trading actions on real brokerage accounts. The author accepts no
+responsibility or liability whatsoever for any financial loss, account
+restriction, API access revocation, or violation of T-Bank's terms of
+service resulting from the use of this code — during the private phase or
+after it becomes public.
+
+Use of this code is neither recommended nor prohibited by the author: once
+public, do whatever you want with it, entirely at your own risk. Please do
+not violate T-Bank's API terms of service.
+
+
+==========================================================================
+
+
+BITinvest — Лицензия (русская версия)
+=======================================
+
+У этого репозитория две фазы лицензии: ограниченная, пока он приватный, и
+MIT — после того как автор сделает его публичным. Ниже — полный перевод
+английской версии выше.
+
+
+ПОКА РЕПОЗИТОРИЙ ПРИВАТНЫЙ
+----------------------------
+
+Все права защищены. Использование, копирование, изменение или
+распространение любой части этого кода запрещено, пока репозиторий
+приватный — за исключением автора (Алексея Легошина, GitHub: alexlegoshin)
+и сессий Claude Code, работающих под непосредственным контролем автора.
+
+Это ПО ни разу не использовалось в реальной торговле во времена "Тинькофф"
+(то есть до ребрендинга банка в Т-Банк). Любое использование идей или кода
+из этого репозитория, в любой момент времени, должно строго соответствовать
+актуальным правилам T-Invest API Т-Банка.
+
+Любое редактирование кода кем-либо, кроме автора или сессии Claude Code под
+непосредственным контролем автора, запрещено, пока репозиторий приватный.
+
+
+ПОСЛЕ ТОГО КАК РЕПОЗИТОРИЙ СТАНЕТ ПУБЛИЧНЫМ
+----------------------------------------------
+
+С даты, когда автор сделает этот репозиторий публичным, код распространяется
+по лицензии MIT (юридически действующим текстом является английский оригинал
+выше; смысл — стандартная лицензия MIT: разрешено использовать, копировать,
+изменять, публиковать, распространять, сублицензировать и продавать копии
+ПО практически без ограничений, при условии сохранения уведомления об
+авторских правах; ПО предоставляется "как есть", без каких-либо гарантий,
+авторы не несут ответственности по каким-либо искам, убыткам или иной
+ответственности, связанной с ПО или его использованием).
+
+
+ДИСКЛЕЙМЕР
+----------
+
+Это личный неофициальный проект, никак не связанный с Т-Банком /
+Т-Инвестициями и не одобренный ими. Он автоматизирует реальные торговые
+действия на реальных брокерских счетах. Автор не несёт никакой
+ответственности за любые финансовые потери, ограничения счёта, отзыв
+доступа к API или нарушение правил Т-Банка, возникшие в результате
+использования этого кода — как в приватной фазе, так и после перехода
+репозитория в публичный статус.
+
+Автор не рекомендует пользоваться этим кодом, но и не запрещает: после
+публикации репозитория делайте с ним что хотите, полностью на свой страх и
+риск. Пожалуйста, не нарушайте правила T-Invest API Т-Банка.
