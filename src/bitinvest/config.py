@@ -7,7 +7,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SECRETS_DIR = Path(os.environ.get("BITINVEST_SECRETS_DIR", REPO_ROOT / "secrets"))
 DATA_DIR = Path(os.environ.get("BITINVEST_DATA_DIR", REPO_ROOT / "data"))
-STEP_CSV = DATA_DIR / "step.csv"
+STEP_FILE = DATA_DIR / "step.json"
 
 
 @dataclass

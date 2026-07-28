@@ -2,5 +2,4 @@
 --extra-index-url https://pypi.org/simple
 
 t-tech-investments
-pandas
 pytest

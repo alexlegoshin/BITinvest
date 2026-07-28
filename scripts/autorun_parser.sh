@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs on the master/parser host. Reads master account tokens, republishes
-# step.csv for the executor host to fetch over HTTP.
+# step.json for the executor host to fetch over HTTP.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export PYTHONPATH="$PWD/src:${PYTHONPATH:-}"
@@ -27,7 +27,7 @@ mkdir -p "$PUBLISH_DIR"
 
 while true; do
   if python3 -m bitinvest.parser_service; then
-    cp data/step.csv "$PUBLISH_DIR/step.csv"
+    cp data/step.json "$PUBLISH_DIR/step.json"
   else
     echo "parser_service failed, will retry" >&2
   fi
