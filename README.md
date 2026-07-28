@@ -1,1 +1,3 @@
-# BIT-Tinkoff-Invest-Bot
+# BITinvest
+
+(изначально — BIT-Tinkoff-Invest-Bot)
