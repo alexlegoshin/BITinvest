@@ -1,11 +1,16 @@
-"""Continuous A/B runner: crunches tools/ab_cash_policy.py and
-tools/ab_liquidation_policy.py forever, keeping running (bounded-size)
-aggregates in data/ab_results.json instead of one-shot stdout printouts.
+"""Continuous A/B runner: crunches tools/ab_cash_policy.py,
+tools/ab_leverage_policy.py and tools/ab_liquidation_policy.py forever,
+keeping running (bounded-size) aggregates in data/ab_results.json instead of
+one-shot stdout printouts.
 
 Runs several independent "slots" on their own timers (see SLOTS at the
 bottom):
 
   * cash_policy_synthetic          — no network, large-N over time.
+  * leverage_policy_synthetic      — no network; "cap" vs "normalize" against
+    a master whose own gross exposure drifts over time (see the docstring of
+    tools/ab_leverage_policy.py for why that's the only regime where the two
+    policies differ).
   * liquidation_synthetic_step*    — no network; three step_pct values
     (10/25/40) run in parallel, closing the "sweep liquidation_step_pct"
     TODO in documentation/ab-tests.md.
@@ -39,6 +44,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import ab_cash_policy  # noqa: E402
+import ab_leverage_policy as ab_lev  # noqa: E402
 import ab_liquidation_policy as ab_liq  # noqa: E402
 from _stats import MetricBag  # noqa: E402
 
@@ -95,6 +101,9 @@ class Runner:
         self.cash_bags: dict[str, MetricBag] = {p: MetricBag() for p in ab_cash_policy.POLICIES}
         self.cash_cycles = 0
 
+        self.lev_bags: dict[str, MetricBag] = {p: MetricBag() for p in ab_lev.POLICIES}
+        self.lev_cycles = 0
+
         self.liq_syn_bags: dict[str, dict[str, MetricBag]] = {
             f"step_{int(p)}": {name: MetricBag() for name, _, _ in BUCKETS} for p in STEP_PCTS
         }
@@ -108,6 +117,7 @@ class Runner:
 
         self._rng = {
             "cash": random.Random(),
+            "leverage": random.Random(),
             "liq_syn": random.Random(),
             "liq_real": random.Random(),
         }
@@ -130,6 +140,22 @@ class Runner:
                 turnover=account.turnover, fees=account.commission,
             )
         self.cash_cycles += 1
+
+    # -- leverage_policy_synthetic ---------------------------------------
+
+    def cycle_leverage_policy(self) -> None:
+        seed = self._seed("leverage")
+        accounts = ab_lev.run_all(seed)
+        series = ab_cash_policy.price_series(random.Random(seed))
+        final = series[-1]
+        for policy, account in accounts.items():
+            equity = account.snapshot(final).equity
+            idle_pct = account.cash / equity * 100 if equity else 0.0
+            self.lev_bags[policy].add(
+                equity=equity, idle_pct=idle_pct, trades=account.trades,
+                turnover=account.turnover, fees=account.commission,
+            )
+        self.lev_cycles += 1
 
     # -- liquidation_synthetic_step* -------------------------------------
 
@@ -206,6 +232,10 @@ class Runner:
                 "cycles": self.cash_cycles, "days": ab_cash_policy.DAYS,
                 "policies": {p: bag.to_dict() for p, bag in self.cash_bags.items()},
             },
+            "leverage_policy_synthetic": {
+                "cycles": self.lev_cycles, "days": ab_lev.DAYS,
+                "policies": {p: bag.to_dict() for p, bag in self.lev_bags.items()},
+            },
             "liquidation_synthetic": {
                 key: {"cycles": self.liq_syn_cycles[key],
                       "buckets": {name: bag.to_dict() for name, bag in bags.items()}}
@@ -234,6 +264,7 @@ class Slot:
 def make_slots(runner: Runner) -> list[Slot]:
     slots = [
         Slot("cash_policy_synthetic", CASH_PERIOD_SEC, runner.cycle_cash_policy),
+        Slot("leverage_policy_synthetic", CASH_PERIOD_SEC, runner.cycle_leverage_policy),
     ]
     for step_pct in STEP_PCTS:
         slots.append(Slot(
