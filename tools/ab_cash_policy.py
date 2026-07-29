@@ -129,7 +129,18 @@ def run(policy: str, series: list[dict[str, float]]) -> Account:
     return account
 
 
+POLICIES = ("never", "underweight_first", "proportional")
+
+
+def run_all(seed: int = SEED) -> dict[str, Account]:
+    """One fresh synthetic price path, all three policies replayed against it.
+    Used both by main() below and by tools/ab_runner.py's continuous slot."""
+    series = price_series(random.Random(seed))
+    return {policy: run(policy, series) for policy in POLICIES}
+
+
 def main() -> None:
+    accounts = run_all(SEED)
     series = price_series(random.Random(SEED))
     final = series[-1]
     deposited = START_CASH + DEPOSIT * (DAYS // DEPOSIT_EVERY)
@@ -139,8 +150,8 @@ def main() -> None:
     print(header)
     print("-" * len(header))
 
-    for policy in ("never", "underweight_first", "proportional"):
-        account = run(policy, series)
+    for policy in POLICIES:
+        account = accounts[policy]
         equity = account.snapshot(final).equity
         idle = account.cash / equity * 100 if equity else 0.0
         print(f"{policy:<20}{equity:>14,.0f}{idle:>11.1f}%{account.trades:>8}"

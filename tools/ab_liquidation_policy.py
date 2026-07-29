@@ -105,9 +105,9 @@ def base_price_path(scenario: Scenario, rng: random.Random, days: int) -> list[f
     return path
 
 
-def run_scenario(scenario: Scenario, base: list[float], mode: str) -> dict:
+def run_scenario(scenario: Scenario, base: list[float], mode: str, step_pct: float = STEP_PCT) -> dict:
     settings = Settings(mode="mirror", min_order_value=0.0,
-                        liquidation_mode=mode, liquidation_step_pct=STEP_PCT)
+                        liquidation_mode=mode, liquidation_step_pct=step_pct)
     empty_master = MasterView(positions=(), equity=0.0)
 
     lots_held = scenario.initial_lots
@@ -145,14 +145,14 @@ def run_scenario(scenario: Scenario, base: list[float], mode: str) -> dict:
     }
 
 
-def run_all(n: int, seed: int = SEED) -> list[dict]:
+def run_all(n: int, seed: int = SEED, step_pct: float = STEP_PCT) -> list[dict]:
     rng = random.Random(seed)
     scenarios = make_scenarios(n, rng)
     results = []
     for scenario in scenarios:
         base = base_price_path(scenario, rng, MAX_CYCLES + 1)
-        full = run_scenario(scenario, base, "full")
-        gradual = run_scenario(scenario, base, "gradual")
+        full = run_scenario(scenario, base, "full", step_pct)
+        gradual = run_scenario(scenario, base, "gradual", step_pct)
         results.append({"scenario": scenario, "full": full, "gradual": gradual})
     return results
 
