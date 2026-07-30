@@ -16,10 +16,13 @@ not on anything specific to the cash-policy harness.
 
     python tools/ab_leverage_policy.py
 
-TODO before this is decision-grade: the master's own gross exposure here is a
-synthetic random walk, not a real master account's history. If a real master
-is almost always fully invested, cap/normalize are moot in practice — that's
-worth checking before spending more effort calibrating this.
+`run_all_real()` replays the same drifting-exposure master over a real
+closing-price series (see tools/ab_runner.py's shared real-basket slot)
+instead of the synthetic random walk in `price_series`. The master's own
+gross-exposure walk itself is still invented — there is no real master
+account history to read it from yet, only market data via the sandbox token.
+If a real master turns out to be almost always fully invested, cap/normalize
+are moot in practice — that is still worth checking once such history exists.
 """
 
 from __future__ import annotations
@@ -36,6 +39,7 @@ from bitinvest.strategy import plan_orders  # noqa: E402
 
 from ab_cash_policy import (  # noqa: E402
     COMMISSION, DAYS, INSTRUMENTS, LOT_SIZE, START_CASH, Account, price_series,
+    real_series_from_basket,
 )
 
 SEED = 20260730
@@ -55,10 +59,19 @@ def master_gross_series(rng: random.Random, days: int) -> list[float]:
     return series
 
 
-def master_view(day: int, prices: dict[str, float], gross_series: list[float]) -> MasterView:
-    """A buy-and-hold master (same reshuffle as ab_cash_policy) whose total
-    exposure that day is gross_series[day] instead of always ~0.95."""
-    held = INSTRUMENTS[:4] if day < DAYS // 2 else INSTRUMENTS[2:]
+def master_view(day: int, prices: dict[str, float], gross_series: list[float],
+                total_days: int = DAYS, instruments: list[str] = INSTRUMENTS) -> MasterView:
+    """A buy-and-hold master (same reshuffle idea as ab_cash_policy) whose
+    total exposure that day is gross_series[day] instead of always ~0.95.
+
+    `total_days`/`instruments` parametrised the same way as
+    ab_cash_policy.master_view, so this replays over a real price series of
+    whatever length came back from the API. Default 6-instrument case slices
+    exactly as before: [:4] for the first half, [2:6] for the second.
+    """
+    n = len(instruments)
+    window = max(1, n - 2)
+    held = instruments[:window] if day < total_days // 2 else instruments[n - window:]
     weight = gross_series[day] / len(held)
     return MasterView(
         positions=tuple(
@@ -74,12 +87,15 @@ def run(policy: str, series: list[dict[str, float]], gross_series: list[float]) 
     settings = Settings(mode="mirror", min_order_value=1000.0,
                         target_leverage=TARGET_LEVERAGE, leverage_policy=policy)
     account = Account(cash=START_CASH)
+    total_days = len(series) - 1
+    instruments = [t for t in INSTRUMENTS if t in series[0]]
 
     for day, prices in enumerate(series):
         snapshot = account.snapshot(prices)
         if snapshot.equity <= 0:
             continue
-        orders = plan_orders(master_view(day, prices, gross_series), snapshot, settings)
+        orders = plan_orders(master_view(day, prices, gross_series, total_days, instruments),
+                             snapshot, settings)
         account.apply(orders, prices)
 
     return account
@@ -90,6 +106,16 @@ def run_all(seed: int = SEED) -> dict[str, Account]:
     against it. Used both by main() below and tools/ab_runner.py's slot."""
     series = price_series(random.Random(seed))
     gross_series = master_gross_series(random.Random(seed + 1), DAYS)
+    return {policy: run(policy, series, gross_series) for policy in POLICIES}
+
+
+def run_all_real(prices_by_ticker: dict[str, list[float]], seed: int = SEED) -> dict[str, Account]:
+    """Same drifting-exposure master, replayed over a real closing-price
+    series (see tools/ab_runner.py's shared real-basket slot) instead of the
+    synthetic random walk. Only the price path is real; the master's own
+    gross-exposure walk is still invented (see the module docstring)."""
+    series = real_series_from_basket(prices_by_ticker)
+    gross_series = master_gross_series(random.Random(seed), len(series) - 1)
     return {policy: run(policy, series, gross_series) for policy in POLICIES}
 
 

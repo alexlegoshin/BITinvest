@@ -8,11 +8,13 @@ both policies see byte-identical conditions and the comparison is reproducible.
 
     python tools/ab_cash_policy.py
 
-TODO: synthetic prices only show the mechanism, not which policy is better on
-the real thing. Before treating this as an answer, replay an actual series:
-`operations.get_operations()` over the master account for its composition
-changes, plus historical candles for the instruments it holds. The harness
-below takes prices as an injected sequence precisely so that swap is small.
+`run_all_real()` closes half of the original TODO: it replays the same
+reshuffle schedule over a real closing-price series (see tools/ab_runner.py's
+shared real-basket slot) instead of a synthetic random walk. What is still
+synthetic is the master's *composition changes* — real prices, invented
+rebalancing dates — since there is no real master trading history to replay
+yet (only market data, via the sandbox token). `operations.get_operations()`
+over an actual master account would close the rest, once one exists.
 """
 
 from __future__ import annotations
@@ -82,23 +84,36 @@ def price_series(rng: random.Random) -> list[dict[str, float]]:
     return series
 
 
-def master_weights(day: int) -> dict[str, float]:
-    """A buy-and-hold master that reshuffles twice over three years."""
-    if day < DAYS // 3:
-        held = INSTRUMENTS[:4]
-    elif day < 2 * DAYS // 3:
-        held = INSTRUMENTS[1:5]
+def master_weights(day: int, total_days: int = DAYS,
+                   instruments: list[str] = INSTRUMENTS) -> dict[str, float]:
+    """A buy-and-hold master that reshuffles twice over the run.
+
+    Parametrised on `total_days`/`instruments` (defaulting to the synthetic
+    globals) so the same schedule replays over a real price series of whatever
+    length actually came back from the API — see `real_series_from_basket`.
+    `window` is picked so the default 6-instrument case slices exactly as
+    before: [:4], [1:5], [2:6].
+    """
+    n = len(instruments)
+    window = max(1, n - 2)
+    if day < total_days // 3:
+        start = 0
+    elif day < 2 * total_days // 3:
+        start = 1
     else:
-        held = INSTRUMENTS[2:]
+        start = 2
+    start = min(start, n - window)
+    held = instruments[start:start + window]
     return {figi: 0.95 / len(held) for figi in held}
 
 
-def master_view(day: int, prices: dict[str, float]) -> MasterView:
+def master_view(day: int, prices: dict[str, float], total_days: int = DAYS,
+               instruments: list[str] = INSTRUMENTS) -> MasterView:
     return MasterView(
         positions=tuple(
             TargetPosition(figi=figi, lot_size=LOT_SIZE[figi], price=prices[figi],
                            weight=weight, ticker=figi, instrument_uid=f"uid-{figi}")
-            for figi, weight in master_weights(day).items()
+            for figi, weight in master_weights(day, total_days, instruments).items()
         ),
         equity=1_000_000.0,
     )
@@ -111,6 +126,11 @@ def run(policy: str, series: list[dict[str, float]]) -> Account:
         accumulate=AccumulateSettings(deploy_free_cash=policy),
     )
     account = Account(cash=START_CASH)
+    total_days = len(series) - 1
+    # Filtered, not re-derived: keeps INSTRUMENTS' order (and the exact
+    # reshuffle windows above) for the synthetic 6-ticker case, and degrades
+    # to whichever subset a real basket fetch actually returned.
+    instruments = [t for t in INSTRUMENTS if t in series[0]]
 
     for day, prices in enumerate(series):
         if day and day % DEPOSIT_EVERY == 0:
@@ -123,10 +143,18 @@ def run(policy: str, series: list[dict[str, float]]) -> Account:
         snapshot = account.snapshot(prices)
         if snapshot.equity <= 0:
             continue
-        orders = plan_orders(master_view(day, prices), snapshot, settings)
+        orders = plan_orders(master_view(day, prices, total_days, instruments), snapshot, settings)
         account.apply(orders, prices)
 
     return account
+
+
+def real_series_from_basket(prices_by_ticker: dict[str, list[float]]) -> list[dict[str, float]]:
+    """Per-ticker close lists (already truncated to a common length by the
+    caller, see tools/ab_runner.py) -> the list-of-day-dicts shape `run()`
+    expects. Shared by every *_real() variant across the A/B tools."""
+    length = len(next(iter(prices_by_ticker.values())))
+    return [{t: prices_by_ticker[t][i] for t in prices_by_ticker} for i in range(length)]
 
 
 POLICIES = ("never", "underweight_first", "proportional")
@@ -136,6 +164,14 @@ def run_all(seed: int = SEED) -> dict[str, Account]:
     """One fresh synthetic price path, all three policies replayed against it.
     Used both by main() below and by tools/ab_runner.py's continuous slot."""
     series = price_series(random.Random(seed))
+    return {policy: run(policy, series) for policy in POLICIES}
+
+
+def run_all_real(prices_by_ticker: dict[str, list[float]]) -> dict[str, Account]:
+    """Same schedule as run_all(), replayed over a real closing-price series
+    instead of a synthetic random walk (see tools/ab_runner.py's shared
+    real-basket slot)."""
+    series = real_series_from_basket(prices_by_ticker)
     return {policy: run(policy, series) for policy in POLICIES}
 
 

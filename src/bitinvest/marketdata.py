@@ -67,6 +67,34 @@ def resolve_instruments(client, tickers: tuple[str, ...] = TICKERS) -> dict[str,
     return out
 
 
+BASKET_MIN_SPAN = timedelta(days=180)
+BASKET_MAX_SPAN = timedelta(days=1100)      # ~3 years, matching the synthetic
+                                             # harnesses' DAYS=750 trading days
+BASKET_MAX_LOOKBACK = timedelta(days=1500)
+
+
+def sample_basket_window(rng: random.Random) -> tuple[datetime, datetime]:
+    """Real daily window (180 days - 3 years span), for the basket-level A/B
+    tests (mode/cash/leverage_policy/accumulate_tuning/margin_safety) that
+    each need many aligned real trading days across several tickers, not the
+    single instrument at a mixed-interval window `sample_window` produces for
+    liquidation_real. Daily-only: fetching several tickers' worth of intraday
+    candles in one cycle would multiply the API-call burst for no benefit —
+    these tests play out over months, not hours. Separate span constants from
+    `_INTERVALS`'s "day" entry on purpose: that one is tuned for a single
+    instrument's price path, this one wants runs long enough to be comparable
+    to the synthetic harnesses' 750 trading days."""
+    span = timedelta(seconds=rng.uniform(BASKET_MIN_SPAN.total_seconds(), BASKET_MAX_SPAN.total_seconds()))
+
+    now = datetime.now(timezone.utc) - timedelta(days=1)  # daily candles need a closed session
+    latest_start = now - span
+    earliest_start = now - BASKET_MAX_LOOKBACK
+    start = datetime.fromtimestamp(
+        rng.uniform(earliest_start.timestamp(), latest_start.timestamp()), tz=timezone.utc
+    )
+    return start, start + span
+
+
 def sample_window(rng: random.Random) -> Sample:
     """Random (ticker, interval, window) — the "look at Sber for 3 days, then
     Gazprom for 8 hours at another frequency" the user asked for."""

@@ -20,7 +20,11 @@ exposed to price drift across the cycles it takes to fully exit.
 TODO before this is decision-grade, not just a mechanism demo:
   1. IMPACT_K and PERMANENT_FRACTION below are illustrative guesses, not
      calibrated against real order book depth or historical fills for the
-     instruments this bot actually trades.
+     instruments this bot actually trades. (The impact fraction's *shape* —
+     a smooth 1 - exp(-x) saturating curve rather than a hard clip — was
+     fixed after continuous A/B runs showed the old min(0.5, x) clip pinning
+     every 20x_plus/full-mode scenario at an identical 5000bps regardless of
+     how far past 20x the position sat; IMPACT_K itself is still a guess.)
   2. Prices are a random walk, not a real historical series.
   3. Position sizes are drawn from a wide synthetic range; narrow it to what
      the account's actual position sizes look like once there's real data.
@@ -128,7 +132,16 @@ def run_scenario(scenario: Scenario, base: list[float], mode: str, step_pct: flo
             break  # should not happen while lots_held > 0, but don't loop forever
         order = orders[0]
         qty = abs(order.lots)
-        impact_frac = min(0.5, IMPACT_K * math.sqrt(qty / scenario.avg_daily_volume))
+        # 1 - exp(-x) instead of min(0.5, x): for small x it's ~x, same as
+        # the old linear model, but it saturates *smoothly* toward 1 instead
+        # of hard-clipping at a fixed 0.5. The hard clip made every full-mode
+        # scenario with qty/avg_daily_volume this high (the whole 20x_plus
+        # bucket, since a one-shot sale has qty == the entire position) land
+        # on the exact same clipped number — cost_bps pinned at 5000.0 with
+        # zero variance, indistinguishable whether the position was 20x or
+        # 50x daily volume. This keeps them distinct.
+        raw_impact = IMPACT_K * math.sqrt(qty / scenario.avg_daily_volume)
+        impact_frac = 1 - math.exp(-raw_impact)
         exec_price = mid * (1 - impact_frac)
         proceeds += qty * scenario.lot_size * exec_price
         permanent_drag *= (1 - PERMANENT_FRACTION * impact_frac)
