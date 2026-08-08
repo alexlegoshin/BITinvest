@@ -103,7 +103,9 @@ def main() -> None:
         print(f"{mode:<14}{equity:>14,.0f}{idle:>11.1f}%{account.trades:>8}"
               f"{account.turnover:>14,.0f}{account.commission:>10,.0f}")
 
-    print("\nSynthetic prices — this shows the mechanism, not the verdict. See documentation/ab-tests.md.")
+    print("\nThis one local run is a mechanism demo. The actual decision (accumulate wins on")
+    print("equity and trades 4-7x less, confirmed on real prices too) is in")
+    print("tools/ab-tests-documentation.md — config.toml already ships mode = \"accumulate\".")
 
 
 if __name__ == "__main__":

@@ -130,7 +130,9 @@ def main() -> None:
                   f"{account.turnover:>14,.0f}{account.commission:>10,.0f}")
         print()
 
-    print("Synthetic prices — this shows the mechanism, not the verdict. See documentation/ab-tests.md.")
+    print("This one local run is a mechanism demo. Decided in tools/ab-tests-documentation.md:")
+    print("cash_buffer_pct=0 confirmed cleanly; trim_threshold_pct/min_order_value left on")
+    print("their shipped defaults, differences were inside the noise.")
 
 
 if __name__ == "__main__":

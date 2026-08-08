@@ -16,7 +16,7 @@ bottom):
     sweeps (trim_threshold_pct, cash_buffer_pct, min_order_value).
   * liquidation_synthetic_step*    — no network; three step_pct values
     (10/25/40) run in parallel, closing the "sweep liquidation_step_pct"
-    TODO in documentation/ab-tests.md.
+    TODO in tools/ab-tests-documentation.md.
   * liquidation_real (x3, phased)  — needs secrets/sandbox_token.txt. Each
     cycle fetches ONE real (ticker, interval, window) from the T-Invest API
     and replays a batch of synthetic position sizes against that one real
@@ -37,7 +37,7 @@ accumulated statistics on every restart (service redeploys, crashes). The
 liquidation bags deliberately do NOT resume: an impact-model fix (see
 tools/ab_liquidation_policy.py) changed the underlying cost formula, and
 averaging pre-fix and post-fix numbers into the same running stat would be
-silently wrong. See documentation/ab-tests.md for that reset's date and the
+silently wrong. See tools/ab-tests-documentation.md for that reset's date and the
 archived pre-fix snapshot.
 
 Usage:
@@ -179,7 +179,7 @@ class Runner:
         # tools/ab_liquidation_policy.py), so the liquidation_synthetic/
         # liquidation_real keys were deliberately stripped from the live file
         # on the server before this code shipped (archived first, see
-        # documentation/ab-tests.md). Resuming from a post-fix file is exactly
+        # tools/ab-tests-documentation.md). Resuming from a post-fix file is exactly
         # as safe as any other section; it's only the one-time pre/post-fix
         # boundary that must never be averaged together.
 

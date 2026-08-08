@@ -50,7 +50,8 @@ class Settings:
     # unrelated legacy positions. "full" closes it in one shot, which tracks
     # the master faster but risks a worse execution price on size. Which one
     # nets out better is exactly what tools/ab_liquidation_policy.py is for —
-    # not decided in this codebase, see documentation/.
+    # settled by continuous A/B runs, see tools/ab-tests-documentation.md:
+    # gradual wins in the large majority of scenarios.
     liquidation_mode: str = "gradual"
     # Share of the *currently held* lots closed per cycle under "gradual",
     # rounded up, floored at 1 lot so a position always reaches zero in

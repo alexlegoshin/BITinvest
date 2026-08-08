@@ -32,8 +32,10 @@ TODO before this is decision-grade, not just a mechanism demo:
      — it is a further axis worth sweeping once the above are calibrated.
 
 Meant to run unattended on the server across a large N, not to be trusted from
-a single quick local run. Results should be written to documentation/ (see
-documentation/ab-tests.md) so they don't get lost between sessions.
+a single quick local run. Results are recorded in tools/ab-tests-documentation.md
+so they don't get lost between sessions — gradual vs full is decided there
+(gradual wins in the large majority of scenarios); IMPACT_K/PERMANENT_FRACTION
+remain guesses.
 """
 
 from __future__ import annotations
@@ -210,8 +212,10 @@ def main() -> None:
     _summarize("  5x - 20x", _bucket(results, 5, 20))
     _summarize("  ratio >= 20x (illiquid)", _bucket(results, 20, float("inf")))
 
-    print("\nSynthetic prices and a guessed impact model — mechanism demo, not a verdict.")
-    print("See the TODO at the top of this file and documentation/ab-tests.md.")
+    print("\nThis one local run is a mechanism demo, not the verdict — the guessed impact")
+    print("model stays a caveat regardless of N. The actual decision (gradual wins in the")
+    print("large majority of scenarios) is in tools/ab-tests-documentation.md, backed by")
+    print("continuous server runs across both synthetic and real price data.")
 
 
 if __name__ == "__main__":

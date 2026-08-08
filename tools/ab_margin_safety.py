@@ -162,7 +162,9 @@ def main() -> None:
         print(f"{label(safety):<10}{s['n']:>8}{s['capital_used_pct_mean']:>13.1f}%"
               f"{s['worst_margin_ratio_mean']:>14.2f}{s['margin_call_rate']:>17.1%}")
 
-    print("\nReal prices, guessed risk rate — see the module docstring and documentation/ab-tests.md.")
+    print("\nReal prices, guessed risk rate — see the module docstring. Decided in")
+    print("tools/ab-tests-documentation.md: margin_safety is a risk-appetite choice, not")
+    print("an optimum — the data shows the capital-vs-margin-call trade-off, not a winner.")
 
 
 if __name__ == "__main__":
