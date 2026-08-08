@@ -28,7 +28,14 @@ def slave(cash, **holdings):
 
 
 def settings(**kwargs):
+    # This suite is about strategy.py's own logic, not about which policy
+    # config.toml happens to ship as its default — pin both explicitly here
+    # so a future default change (like the A/B-driven mode/leverage_policy
+    # switch to accumulate/normalize) can't silently change what these
+    # hand-picked example weights are supposed to produce.
     accumulate = AccumulateSettings(**kwargs.pop("accumulate", {}))
+    kwargs.setdefault("mode", "mirror")
+    kwargs.setdefault("leverage_policy", "cap")
     kwargs.setdefault("min_order_value", 0.0)
     return Settings(accumulate=accumulate, **kwargs)
 

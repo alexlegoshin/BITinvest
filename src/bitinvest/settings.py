@@ -29,9 +29,13 @@ class AccumulateSettings:
 
 @dataclass(frozen=True)
 class Settings:
-    mode: str = "mirror"
+    # mirror/accumulate and cap/normalize both settled by continuous A/B runs
+    # on legoshi.tech (synthetic + real prices, see the wiki) — accumulate and
+    # normalize won on equity and were markedly cheaper on trades/turnover in
+    # both cases. See tools/ab_mode_policy.py and tools/ab_leverage_policy.py.
+    mode: str = "accumulate"
     target_leverage: float = 1.0
-    leverage_policy: str = "cap"
+    leverage_policy: str = "normalize"
     allow_short: bool = True
     margin_safety: float = 0.9
     min_order_value: float = 1000.0
