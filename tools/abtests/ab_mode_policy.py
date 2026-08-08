@@ -12,14 +12,14 @@ never told us whether `accumulate` itself beats `mirror`, or vice versa.
 Reuses ab_cash_policy's account bookkeeping and reshuffling master — the
 comparison is about the rebalancing algorithm, not about a different market
 scenario. `accumulate` runs with `deploy_free_cash="underweight_first"`, the
-policy `tools/ab_cash_policy.py`'s own continuous run already favours, so this
+policy `tools/abtests/ab_cash_policy.py`'s own continuous run already favours, so this
 is "accumulate at its best" versus "mirror", not accumulate crippled by a
 worse cash policy.
 
-    python tools/ab_mode_policy.py
+    python tools/abtests/ab_mode_policy.py
 
 `run_all_real()` replays the same schedule over a real closing-price series
-(see tools/ab_runner.py's shared real-basket slot); the master's composition
+(see tools/abtests/ab_runner.py's shared real-basket slot); the master's composition
 changes are still invented, same caveat as the other *_real() variants here.
 """
 
@@ -29,7 +29,7 @@ import random
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from bitinvest.settings import AccumulateSettings, Settings  # noqa: E402
 from bitinvest.strategy import plan_orders  # noqa: E402
@@ -73,7 +73,7 @@ def run(mode: str, series: list[dict[str, float]]) -> Account:
 
 def run_all(seed: int = SEED) -> dict[str, Account]:
     """One fresh synthetic price path, both modes replayed against it. Used
-    both by main() below and by tools/ab_runner.py's continuous slot."""
+    both by main() below and by tools/abtests/ab_runner.py's continuous slot."""
     series = price_series(random.Random(seed))
     return {mode: run(mode, series) for mode in MODES}
 
@@ -105,7 +105,7 @@ def main() -> None:
 
     print("\nThis one local run is a mechanism demo. The actual decision (accumulate wins on")
     print("equity and trades 4-7x less, confirmed on real prices too) is in")
-    print("tools/ab-tests-documentation.md — config.toml already ships mode = \"accumulate\".")
+    print("tools/abtests/ab-tests-documentation.md — config.toml already ships mode = \"accumulate\".")
 
 
 if __name__ == "__main__":

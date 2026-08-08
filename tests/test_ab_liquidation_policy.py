@@ -1,7 +1,7 @@
 """Mechanical smoke tests for the liquidation A/B harness — this only checks
 the tool runs correctly and stays deterministic. It deliberately does not run
 the full campaign or draw any conclusion about which policy wins; that verdict
-comes from the continuous server runs, see tools/ab-tests-documentation.md."""
+comes from the continuous server runs, see tools/abtests/ab-tests-documentation.md."""
 
 import ab_liquidation_policy as ab
 

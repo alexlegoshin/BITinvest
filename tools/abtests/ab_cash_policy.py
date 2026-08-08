@@ -6,10 +6,10 @@ to compare policies through the code that will actually trade, not through a
 separate model of it. Prices, deposits and dividends come from a fixed seed, so
 both policies see byte-identical conditions and the comparison is reproducible.
 
-    python tools/ab_cash_policy.py
+    python tools/abtests/ab_cash_policy.py
 
 `run_all_real()` closes half of the original TODO: it replays the same
-reshuffle schedule over a real closing-price series (see tools/ab_runner.py's
+reshuffle schedule over a real closing-price series (see tools/abtests/ab_runner.py's
 shared real-basket slot) instead of a synthetic random walk. What is still
 synthetic is the master's *composition changes* — real prices, invented
 rebalancing dates — since there is no real master trading history to replay
@@ -25,7 +25,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from bitinvest.portfolio import MasterView, Position, Snapshot, TargetPosition  # noqa: E402
 from bitinvest.settings import AccumulateSettings, Settings  # noqa: E402
@@ -151,7 +151,7 @@ def run(policy: str, series: list[dict[str, float]]) -> Account:
 
 def real_series_from_basket(prices_by_ticker: dict[str, list[float]]) -> list[dict[str, float]]:
     """Per-ticker close lists (already truncated to a common length by the
-    caller, see tools/ab_runner.py) -> the list-of-day-dicts shape `run()`
+    caller, see tools/abtests/ab_runner.py) -> the list-of-day-dicts shape `run()`
     expects. Shared by every *_real() variant across the A/B tools."""
     length = len(next(iter(prices_by_ticker.values())))
     return [{t: prices_by_ticker[t][i] for t in prices_by_ticker} for i in range(length)]
@@ -162,14 +162,14 @@ POLICIES = ("never", "underweight_first", "proportional")
 
 def run_all(seed: int = SEED) -> dict[str, Account]:
     """One fresh synthetic price path, all three policies replayed against it.
-    Used both by main() below and by tools/ab_runner.py's continuous slot."""
+    Used both by main() below and by tools/abtests/ab_runner.py's continuous slot."""
     series = price_series(random.Random(seed))
     return {policy: run(policy, series) for policy in POLICIES}
 
 
 def run_all_real(prices_by_ticker: dict[str, list[float]]) -> dict[str, Account]:
     """Same schedule as run_all(), replayed over a real closing-price series
-    instead of a synthetic random walk (see tools/ab_runner.py's shared
+    instead of a synthetic random walk (see tools/abtests/ab_runner.py's shared
     real-basket slot)."""
     series = real_series_from_basket(prices_by_ticker)
     return {policy: run(policy, series) for policy in POLICIES}

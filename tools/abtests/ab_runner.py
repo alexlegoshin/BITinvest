@@ -1,4 +1,4 @@
-"""Continuous A/B runner: crunches every tools/ab_*.py harness forever,
+"""Continuous A/B runner: crunches every tools/abtests/ab_*.py harness forever,
 keeping running (bounded-size) aggregates in data/ab_results.json instead of
 one-shot stdout printouts.
 
@@ -8,7 +8,7 @@ bottom):
   * cash_policy_synthetic          — no network, large-N over time.
   * leverage_policy_synthetic      — no network; "cap" vs "normalize" against
     a master whose own gross exposure drifts over time (see the docstring of
-    tools/ab_leverage_policy.py for why that's the only regime where the two
+    tools/abtests/ab_leverage_policy.py for why that's the only regime where the two
     policies differ).
   * mode_policy_synthetic          — no network; "mirror" vs "accumulate",
     the largest untested fork in strategy.py before this file existed.
@@ -16,7 +16,7 @@ bottom):
     sweeps (trim_threshold_pct, cash_buffer_pct, min_order_value).
   * liquidation_synthetic_step*    — no network; three step_pct values
     (10/25/40) run in parallel, closing the "sweep liquidation_step_pct"
-    TODO in tools/ab-tests-documentation.md.
+    TODO in tools/abtests/ab-tests-documentation.md.
   * liquidation_real (x3, phased)  — needs secrets/sandbox_token.txt. Each
     cycle fetches ONE real (ticker, interval, window) from the T-Invest API
     and replays a batch of synthetic position sizes against that one real
@@ -35,14 +35,14 @@ Every *_synthetic bag except the liquidation ones resumes from whatever was
 last written to data/ab_results.json on process start, instead of losing
 accumulated statistics on every restart (service redeploys, crashes). The
 liquidation bags deliberately do NOT resume: an impact-model fix (see
-tools/ab_liquidation_policy.py) changed the underlying cost formula, and
+tools/abtests/ab_liquidation_policy.py) changed the underlying cost formula, and
 averaging pre-fix and post-fix numbers into the same running stat would be
-silently wrong. See tools/ab-tests-documentation.md for that reset's date and the
+silently wrong. See tools/abtests/ab-tests-documentation.md for that reset's date and the
 archived pre-fix snapshot.
 
 Usage:
-    python tools/ab_runner.py            # runs forever
-    python tools/ab_runner.py --once      # one cycle per slot, then exit
+    python tools/abtests/ab_runner.py            # runs forever
+    python tools/abtests/ab_runner.py --once      # one cycle per slot, then exit
 """
 
 from __future__ import annotations
@@ -60,7 +60,7 @@ from pathlib import Path
 from typing import Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 import ab_accumulate_tuning as ab_tune  # noqa: E402
 import ab_cash_policy  # noqa: E402
@@ -73,7 +73,7 @@ from _stats import MetricBag  # noqa: E402
 from bitinvest import config  # noqa: E402
 
 # bitinvest.marketdata imports t_tech.invest, which the synthetic-only slots
-# don't need at all — deferred so `python tools/ab_runner.py --once` works
+# don't need at all — deferred so `python tools/abtests/ab_runner.py --once` works
 # with zero extra deps when there's no sandbox_token.txt (see run()).
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -176,10 +176,10 @@ class Runner:
         # -- liquidation bags: resumable like everything else in general, but
         # see the *contents* of data/ab_results.json at deploy time — an
         # impact-model fix changed the underlying cost formula (see
-        # tools/ab_liquidation_policy.py), so the liquidation_synthetic/
+        # tools/abtests/ab_liquidation_policy.py), so the liquidation_synthetic/
         # liquidation_real keys were deliberately stripped from the live file
         # on the server before this code shipped (archived first, see
-        # tools/ab-tests-documentation.md). Resuming from a post-fix file is exactly
+        # tools/abtests/ab-tests-documentation.md). Resuming from a post-fix file is exactly
         # as safe as any other section; it's only the one-time pre/post-fix
         # boundary that must never be averaged together.
 

@@ -10,14 +10,14 @@ random walk in [0.35, 1.0]) instead of always being fully invested — that's
 the one regime where this question has an answer to give.
 
 Runs the real `strategy.plan_orders` (mirror mode) day by day, reusing
-tools/ab_cash_policy.py's price series and account bookkeeping — the
+tools/abtests/ab_cash_policy.py's price series and account bookkeeping — the
 comparison depends on how leverage.scale_factor reacts to master exposure,
 not on anything specific to the cash-policy harness.
 
-    python tools/ab_leverage_policy.py
+    python tools/abtests/ab_leverage_policy.py
 
 `run_all_real()` replays the same drifting-exposure master over a real
-closing-price series (see tools/ab_runner.py's shared real-basket slot)
+closing-price series (see tools/abtests/ab_runner.py's shared real-basket slot)
 instead of the synthetic random walk in `price_series`. The master's own
 gross-exposure walk itself is still invented — there is no real master
 account history to read it from yet, only market data via the sandbox token.
@@ -31,7 +31,7 @@ import random
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from bitinvest.portfolio import MasterView, Snapshot, TargetPosition  # noqa: E402
 from bitinvest.settings import Settings  # noqa: E402
@@ -103,7 +103,7 @@ def run(policy: str, series: list[dict[str, float]], gross_series: list[float]) 
 
 def run_all(seed: int = SEED) -> dict[str, Account]:
     """One fresh (price, master-exposure) path, both policies replayed
-    against it. Used both by main() below and tools/ab_runner.py's slot."""
+    against it. Used both by main() below and tools/abtests/ab_runner.py's slot."""
     series = price_series(random.Random(seed))
     gross_series = master_gross_series(random.Random(seed + 1), DAYS)
     return {policy: run(policy, series, gross_series) for policy in POLICIES}
@@ -111,7 +111,7 @@ def run_all(seed: int = SEED) -> dict[str, Account]:
 
 def run_all_real(prices_by_ticker: dict[str, list[float]], seed: int = SEED) -> dict[str, Account]:
     """Same drifting-exposure master, replayed over a real closing-price
-    series (see tools/ab_runner.py's shared real-basket slot) instead of the
+    series (see tools/abtests/ab_runner.py's shared real-basket slot) instead of the
     synthetic random walk. Only the price path is real; the master's own
     gross-exposure walk is still invented (see the module docstring)."""
     series = real_series_from_basket(prices_by_ticker)

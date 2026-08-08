@@ -14,12 +14,12 @@ file's baseline scenario. Shipped default: 1000 RUB.
 
 Each grid is swept independently — the other two knobs held at their shipped
 default — against the same reshuffling master and price path as
-tools/ab_cash_policy.py, with `deploy_free_cash` fixed at "underweight_first".
+tools/abtests/ab_cash_policy.py, with `deploy_free_cash` fixed at "underweight_first".
 
-    python tools/ab_accumulate_tuning.py
+    python tools/abtests/ab_accumulate_tuning.py
 
 `run_all_real()` replays the same three sweeps over a real closing-price
-series (see tools/ab_runner.py's shared real-basket slot); the master's
+series (see tools/abtests/ab_runner.py's shared real-basket slot); the master's
 composition changes are still invented, same caveat as this file's siblings.
 """
 
@@ -29,7 +29,7 @@ import random
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from bitinvest.settings import AccumulateSettings, Settings  # noqa: E402
 from bitinvest.strategy import plan_orders  # noqa: E402
@@ -99,7 +99,7 @@ def _sweep(series: list[dict[str, float]]) -> dict[str, dict[str, Account]]:
 
 def run_all(seed: int = SEED) -> dict[str, dict[str, Account]]:
     """One fresh synthetic price path, all three grids replayed against it.
-    Used both by main() below and by tools/ab_runner.py's continuous slot."""
+    Used both by main() below and by tools/abtests/ab_runner.py's continuous slot."""
     series = price_series(random.Random(seed))
     return _sweep(series)
 
@@ -130,7 +130,7 @@ def main() -> None:
                   f"{account.turnover:>14,.0f}{account.commission:>10,.0f}")
         print()
 
-    print("This one local run is a mechanism demo. Decided in tools/ab-tests-documentation.md:")
+    print("This one local run is a mechanism demo. Decided in tools/abtests/ab-tests-documentation.md:")
     print("cash_buffer_pct=0 confirmed cleanly; trim_threshold_pct/min_order_value left on")
     print("their shipped defaults, differences were inside the noise.")
 

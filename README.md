@@ -16,6 +16,80 @@ Copy-trading мост между брокерскими счетами T-Bank In
 понимания «а что вообще происходит», и чтобы через полгода можно было сверить
 поведение системы с тем, что задумывалось.
 
+## Быстрый старт
+
+### 1. Установка
+
+Библиотека `tinkoff-investments` в карантине на PyPI и не ставится. Используется
+официальный преемник `t-tech-investments` (Т-Банк) с отдельного индекса, путь
+импорта — `t_tech.invest` (было `tinkoff.invest`).
+
+```bash
+conda env create -f environment.yml
+conda activate BITinvest
+```
+
+или через pip напрямую:
+
+```bash
+pip install -r requirements.txt
+```
+
+Из зависимостей осталась одна библиотека API: pandas выкинут, модель считается
+на датаклассах.
+
+### 2. Токены
+
+Архитектура — **два физически разных хоста**: parser (держит токены master-
+счетов) и executor (держит токен slave-счёта), обмен — только через
+`step.json` по HTTP, без прямой связи между хостами.
+
+Токены создаются в личном кабинете T-Invest. **Обязательно** account-scoped
+(привязаны к одному конкретному брокерскому счёту, не full-profile) — иначе
+при нескольких счетах под одним токеном ордер уйдёт не туда (код
+предупреждает в лог и работает по первому счёту). Токен живёт 3 месяца с
+момента последнего использования.
+
+При первом запуске `scripts/autorun_*.sh` интерактивно спросят токены и
+сохранят их в `secrets/` (`chmod 600`, не в аргументах командной строки — не
+светятся в `ps aux`). Ровно **один** slave-токен — executor падает с внятной
+ошибкой, если их больше (см. «Известные ограничения»).
+
+### 3. Демо-режим (песочница)
+
+T-Invest предоставляет полноценную песочницу (sandbox) — отдельные виртуальные
+счета с эмуляцией исполнения ордеров. **Пока не подключена**: `broker.py` /
+`portfolio.py` / `trading.py` сейчас ходят в боевые `users`/`operations`/`orders`
+эндпоинты API, а не в `sandbox.*` — интеграция с полноценной песочницей
+запланирована отдельной задачей.
+
+Interim-замена до неё — `dry_run = true` в `config.toml`: executor считает
+**реальный** портфель (нужен реальный токен) и **реальные** целевые ордера, но
+ничего не отправляет на биржу — весь путь виден в логе. Это не «нулевой риск»
+в смысле «вообще без счёта», но ни один ордер физически не уходит на
+исполнение. Для сбора статистики с демо/боевых прогонов заложена заготовка —
+[`tools/livestats/`](tools/livestats).
+
+### 4. Реальный режим
+
+Полностью рабочий путь: реальные токены, `dry_run = false`.
+
+На parser-хосте:
+
+```bash
+BITINVEST_PUBLISH_DIR=/data/www ./scripts/autorun_parser.sh
+```
+
+На executor-хосте:
+
+```bash
+BITINVEST_STEP_URL=http://<parser-host>:8082/step.json ./scripts/autorun_executor.sh
+```
+
+Перед первым живым запуском стоит один раз пройти по пункту 3 (`dry_run =
+true`) — как минимум увидеть в логе, что расчёт целей выглядит разумно, до
+того как ордера пойдут на биржу по-настоящему.
+
 ## Модель портфеля
 
 Реализация: [`src/bitinvest/portfolio.py`](src/bitinvest/portfolio.py).
@@ -82,7 +156,7 @@ k = min(1, target_leverage / L)                   # "cap": target — потол
 это уважается: мы не станем доинвестировать за него. `policy = "normalize"`
 (по умолчанию) — всегда выходим ровно на `target_leverage`, в том числе
 разворачивая кэш мастера в позиции. Выбор `normalize` — результат A/B-теста
-(`tools/ab_leverage_policy.py`, см. [`tools/ab-tests-documentation.md`](tools/ab-tests-documentation.md)):
+(`tools/abtests/ab_leverage_policy.py`, см. [`tools/abtests/ab-tests-documentation.md`](tools/abtests/ab-tests-documentation.md)):
 `cap` заодно зеркалит каждое мелкое дневное колебание собственной экспозиции
 мастера как реальную сделку у slave, `normalize` эту рябь гасит.
 
@@ -186,7 +260,7 @@ order_i       = target_lots_i − current_lots_i
 
 Дивидендный режим: покупать и держать, докупать редко и по делу, не
 дёргаться на любое шевеление весов. Выбор дефолта — результат A/B-теста
-(`tools/ab_mode_policy.py`, см. [`tools/ab-tests-documentation.md`](tools/ab-tests-documentation.md)):
+(`tools/abtests/ab_mode_policy.py`, см. [`tools/abtests/ab-tests-documentation.md`](tools/abtests/ab-tests-documentation.md)):
 `accumulate` впереди `mirror` по equity и в 4–7 раз дешевле по числу сделок,
 подтверждено и на синтетике, и на реальных ценах. Порядок проверки по каждой
 бумаге (`_plan_accumulate`):
@@ -240,8 +314,8 @@ order_i       = target_lots_i − current_lots_i
 на нём остаются легаси-позиции, которых у мастера никогда не было — резкая
 распродажа всего сразу может дать плохую цену исполнения. `full` торгует
 быстрее и точнее следует составу мастера, но платит за это потенциально
-худшим исполнением на объёме. Решено A/B-тестом (`tools/ab_liquidation_policy.py`,
-см. [`tools/ab-tests-documentation.md`](tools/ab-tests-documentation.md)):
+худшим исполнением на объёме. Решено A/B-тестом (`tools/abtests/ab_liquidation_policy.py`,
+см. [`tools/abtests/ab-tests-documentation.md`](tools/abtests/ab-tests-documentation.md)):
 `gradual` дешевле `full` в большинстве сценариев ликвидности (98–100% побед в
 бакетах от средних позиций и выше, 62–86% на самых ликвидных), подтверждено
 и на синтетике, и на реальных котировках. `liquidation_step_pct = 25` тоже
@@ -280,8 +354,8 @@ investable = кэш_slave − Σ(запланированные ордера) �
   получает приоритета — просто пропорция.
 
 Ни при какой политике раскладка кэша не продаёт ничего другого ради этого —
-только покупки на то, что и так простаивало. A/B-тест (`tools/ab_cash_policy.py`,
-см. [`tools/ab-tests-documentation.md`](tools/ab-tests-documentation.md)):
+только покупки на то, что и так простаивало. A/B-тест (`tools/abtests/ab_cash_policy.py`,
+см. [`tools/abtests/ab-tests-documentation.md`](tools/abtests/ab-tests-documentation.md)):
 `never` заметно хуже обоих активных вариантов, `underweight_first` и
 `proportional` между собой статистически неотличимы — дефолт оставлен на
 `underweight_first` за неимением разницы.
@@ -306,16 +380,16 @@ investable = кэш_slave − Σ(запланированные ордера) �
 
 Каждый умеет гонять и синтетику (случайное блуждание цены, фиксированный
 сид, детерминированно), и реальные исторические котировки (T-Invest Sandbox
-market data, 6 тикеров MOEX) — `tools/ab_runner.py`'s слот `real_basket` раз
+market data, 6 тикеров MOEX) — `tools/abtests/ab_runner.py`'s слот `real_basket` раз
 в ~30 минут тянет одно реальное окно и прогоняет через все basket-сравнения
 разом, экономя бюджет обращений к API.
 
-Непрерывно крутится на сервере (`bitinvest-ab.service`, `tools/ab_runner.py`)
+Непрерывно крутится на сервере (`bitinvest-ab.service`, `tools/abtests/ab_runner.py`)
 с 30.07.2026, копит статистику Уэлфорда (бегущее среднее/std, размер файла
 не растёт со временем, переживает рестарт сервиса). Все вопросы, кроме
 `margin_safety` (это выбор риск-аппетита, не оптимизация), **решены** и
 отражены в `config.toml` по умолчанию — полный журнал с цифрами синтетика/
-реальные данные по каждому тесту: [`tools/ab-tests-documentation.md`](tools/ab-tests-documentation.md).
+реальные данные по каждому тесту: [`tools/abtests/ab-tests-documentation.md`](tools/abtests/ab-tests-documentation.md).
 
 ## Формат обмена: `step.json`
 
@@ -375,68 +449,21 @@ src/bitinvest/
 
 scripts/                        # autorun-циклы для обоих хостов
 tools/
-├── ab-tests-documentation.md   # итоговый журнал A/B-тестов: вопрос, данные, решение
-├── _stats.py                    # бегущее среднее/std (Уэлфорд), resume между рестартами
-├── ab_runner.py                  # непрерывный раннер всех A/B-слотов (сервер)
-├── ab_mode_policy.py             # A/B: mirror vs accumulate
-├── ab_leverage_policy.py         # A/B: cap vs normalize
-├── ab_cash_policy.py             # A/B: раскладка свободного кэша
-├── ab_liquidation_policy.py      # A/B: full vs gradual + шаг ликвидации
-├── ab_accumulate_tuning.py       # A/B: trim/buffer/min_order_value
-└── ab_margin_safety.py           # A/B: margin_safety на реальных просадках
+├── abtests/                     # офлайн A/B-тесты: выбор дефолтов config.toml, не торгуют
+│   ├── ab-tests-documentation.md   # итоговый журнал: вопрос, данные, решение
+│   ├── _stats.py                    # бегущее среднее/std (Уэлфорд), resume между рестартами
+│   ├── ab_runner.py                  # непрерывный раннер всех A/B-слотов (сервер)
+│   ├── ab_mode_policy.py             # A/B: mirror vs accumulate
+│   ├── ab_leverage_policy.py         # A/B: cap vs normalize
+│   ├── ab_cash_policy.py             # A/B: раскладка свободного кэша
+│   ├── ab_liquidation_policy.py      # A/B: full vs gradual + шаг ликвидации
+│   ├── ab_accumulate_tuning.py       # A/B: trim/buffer/min_order_value
+│   └── ab_margin_safety.py           # A/B: margin_safety на реальных просадках
+└── livestats/                   # заготовка: статистика с демо/боевых прогонов (пока пусто)
 config.toml                     # настройки исполнителя (секретов нет)
 secrets/  data/                 # в .gitignore
 tests/                           # pytest, без сети
 ```
-
-## Установка
-
-Библиотека `tinkoff-investments` в карантине на PyPI и не ставится. Используется
-официальный преемник `t-tech-investments` (Т-Банк) с отдельного индекса, путь
-импорта — `t_tech.invest` (было `tinkoff.invest`).
-
-```bash
-conda env create -f environment.yml
-conda activate BITinvest
-```
-
-или через pip напрямую:
-
-```bash
-pip install -r requirements.txt
-```
-
-Из зависимостей осталась одна библиотека API: pandas выкинут, модель считается
-на датаклассах.
-
-## Настройка токенов
-
-Токены создаются в личном кабинете T-Invest. **Обязательно** делать их
-**account-scoped** (привязанными к одному конкретному брокерскому счёту), а не
-full-profile — иначе при нескольких счетах под одним токеном ордер уйдёт не туда
-(код предупреждает в лог и работает по первому счёту). Токен живёт 3 месяца с
-момента последнего использования.
-
-При первом запуске `scripts/autorun_*.sh` интерактивно спросят токены и сохранят
-их в `secrets/` (`chmod 600`, не в аргументах командной строки — не светятся в
-`ps aux`).
-
-## Запуск
-
-На parser-хосте:
-
-```bash
-BITINVEST_PUBLISH_DIR=/data/www ./scripts/autorun_parser.sh
-```
-
-На executor-хосте:
-
-```bash
-BITINVEST_STEP_URL=http://<parser-host>:8082/step.json ./scripts/autorun_executor.sh
-```
-
-Перед первым живым запуском имеет смысл выставить `dry_run = true` в
-`config.toml`.
 
 ## Настройки (`config.toml`)
 
@@ -468,7 +495,7 @@ BITINVEST_STEP_URL=http://<parser-host>:8082/step.json ./scripts/autorun_executo
   целей не закладывается — держать плечо ночами дороже, чем выглядит.
 - Рублёвый кэш считается кэшем; прочие валюты остаются обычными позициями.
 - Модель market impact в `ab_liquidation_policy.py` — иллюстративная догадка,
-  не откалиброванная по реальным данным (см. `tools/ab-tests-documentation.md`).
+  не откалиброванная по реальным данным (см. `tools/abtests/ab-tests-documentation.md`).
 
 ## Тесты
 
@@ -478,12 +505,3 @@ pytest tests/
 
 Живых ордеров тесты не делают — только чистая логика на синтетических данных.
 Полный прогон с реальными токенами — вручную, на песочнице/малых суммах.
-
-А вот слив позиции, которой нет у мастера, ровно по 1 лоту за цикл —
-**отдельная вещь и не баг**: это было намеренное решение (не дампить легаси-
-позиции разом при переходе на автоследование), просто без настройки и без
-масштабирования под размер позиции. В первой версии этого README (до
-уточнения) обе вещи были по ошибке описаны как один и тот же дефект — это
-неверно. Восстановлено и обобщено как `liquidation_mode = "gradual"` (доля от
-текущей позиции за цикл вместо жёсткого 1 лота), с явной альтернативой
-`"full"` и A/B-инструментом для сравнения, см. выше.

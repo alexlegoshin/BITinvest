@@ -45,5 +45,5 @@ def load_slave_config() -> TokenGroup:
 
 
 def load_sandbox_token() -> str:
-    """Market-data-only token for the real-data A/B slots (tools/ab_runner.py)."""
+    """Market-data-only token for the real-data A/B slots (tools/abtests/ab_runner.py)."""
     return _read_lines(SECRETS_DIR / "sandbox_token.txt")[0]

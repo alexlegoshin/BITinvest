@@ -15,7 +15,7 @@ the comparison is apples to apples: "full" only ever sees day 0's price and
 day 0's impact; "gradual" trades smaller size (less impact per day) but stays
 exposed to price drift across the cycles it takes to fully exit.
 
-    python tools/ab_liquidation_policy.py [n_scenarios]
+    python tools/abtests/ab_liquidation_policy.py [n_scenarios]
 
 TODO before this is decision-grade, not just a mechanism demo:
   1. IMPACT_K and PERMANENT_FRACTION below are illustrative guesses, not
@@ -32,7 +32,7 @@ TODO before this is decision-grade, not just a mechanism demo:
      — it is a further axis worth sweeping once the above are calibrated.
 
 Meant to run unattended on the server across a large N, not to be trusted from
-a single quick local run. Results are recorded in tools/ab-tests-documentation.md
+a single quick local run. Results are recorded in tools/abtests/ab-tests-documentation.md
 so they don't get lost between sessions — gradual vs full is decided there
 (gradual wins in the large majority of scenarios); IMPACT_K/PERMANENT_FRACTION
 remain guesses.
@@ -47,7 +47,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from bitinvest.portfolio import MasterView, Position, Snapshot  # noqa: E402
 from bitinvest.settings import Settings  # noqa: E402
@@ -214,7 +214,7 @@ def main() -> None:
 
     print("\nThis one local run is a mechanism demo, not the verdict — the guessed impact")
     print("model stays a caveat regardless of N. The actual decision (gradual wins in the")
-    print("large majority of scenarios) is in tools/ab-tests-documentation.md, backed by")
+    print("large majority of scenarios) is in tools/abtests/ab-tests-documentation.md, backed by")
     print("continuous server runs across both synthetic and real price data.")
 
 

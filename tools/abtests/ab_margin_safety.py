@@ -16,7 +16,7 @@ cushion is left before a real adverse price move forces a margin call?
 Method: for each `margin_safety` value, size a long-only, gross=TARGET_GROSS
 synthetic position the same way `executor_service._margin_factor` does
 (`bitinvest.margin.margin_cap`), then hold it unrebalanced across HOLD_DAYS of
-a REAL historical single-ticker price path (see tools/ab_runner.py's shared
+a REAL historical single-ticker price path (see tools/abtests/ab_runner.py's shared
 real-basket slot) and track the worst equity / minimal-margin ratio reached —
 below 1.0 is a margin call. Real-data only: there is no synthetic random walk
 to fall back to here, because the entire point is measuring against genuine
@@ -33,9 +33,9 @@ the capital-utilization side of the tradeoff, while the shock-survival side
 (worst_margin_ratio / margin_call) is what genuinely depends on the sampled
 real price history. ASSUMED_RISK_RATE is a guessed illustrative constant
 (MOEX blue-chip long risk rates commonly sit in this ballpark), not fetched
-from the API — same caveat as IMPACT_K in tools/ab_liquidation_policy.py.
+from the API — same caveat as IMPACT_K in tools/abtests/ab_liquidation_policy.py.
 
-    python tools/ab_margin_safety.py   (needs secrets/sandbox_token.txt)
+    python tools/abtests/ab_margin_safety.py   (needs secrets/sandbox_token.txt)
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ import random
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from bitinvest.margin import RiskRate, margin_cap, required_margin  # noqa: E402
 
@@ -98,7 +98,7 @@ def label(safety: float) -> str:
 
 def run_all_real(prices_by_ticker: dict[str, list[float]], rng: random.Random) -> dict[str, list[dict]]:
     """One margin_safety grid's worth of simulations, drawn from a real
-    multi-ticker basket (see tools/ab_runner.py). Same (ticker, day0) draw is
+    multi-ticker basket (see tools/abtests/ab_runner.py). Same (ticker, day0) draw is
     replayed across every safety value — paired comparison, same pattern as
     the other A/B tools here. Returns {safety_label: [scenario_dict, ...]}."""
     out: dict[str, list[dict]] = {label(s): [] for s in SAFETY_GRID}
@@ -163,7 +163,7 @@ def main() -> None:
               f"{s['worst_margin_ratio_mean']:>14.2f}{s['margin_call_rate']:>17.1%}")
 
     print("\nReal prices, guessed risk rate — see the module docstring. Decided in")
-    print("tools/ab-tests-documentation.md: margin_safety is a risk-appetite choice, not")
+    print("tools/abtests/ab-tests-documentation.md: margin_safety is a risk-appetite choice, not")
     print("an optimum — the data shows the capital-vs-margin-call trade-off, not a winner.")
 
 

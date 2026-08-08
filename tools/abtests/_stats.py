@@ -1,4 +1,4 @@
-"""Welford running mean/std — bounded-memory aggregation for tools/ab_runner.py.
+"""Welford running mean/std — bounded-memory aggregation for tools/abtests/ab_runner.py.
 
 The point: a daemon that runs for weeks must not grow its output file by
 keeping raw samples. Each MetricBag holds only a few floats per named metric,
@@ -66,7 +66,7 @@ class MetricBag:
         """Inverse of to_dict() — resume a bag from what was last written to
         data/ab_results.json instead of starting back at n=0 on every service
         restart. Only valid when the metric being resumed is computed by the
-        exact same code as before (see tools/ab_runner.py's RESUMABLE_SLOTS)."""
+        exact same code as before (see tools/abtests/ab_runner.py's RESUMABLE_SLOTS)."""
         bag = cls()
         n = data.get("n", 0)
         if not n:

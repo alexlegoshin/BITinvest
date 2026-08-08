@@ -30,9 +30,9 @@ class AccumulateSettings:
 @dataclass(frozen=True)
 class Settings:
     # mirror/accumulate and cap/normalize both settled by continuous A/B runs
-    # on legoshi.tech (synthetic + real prices, see the wiki) — accumulate and
-    # normalize won on equity and were markedly cheaper on trades/turnover in
-    # both cases. See tools/ab_mode_policy.py and tools/ab_leverage_policy.py.
+    # on legoshi.tech (synthetic + real prices, see
+    # tools/abtests/ab-tests-documentation.md) — accumulate and normalize won
+    # on equity and were markedly cheaper on trades/turnover in both cases.
     mode: str = "accumulate"
     target_leverage: float = 1.0
     leverage_policy: str = "normalize"
@@ -49,8 +49,8 @@ class Settings:
     # right when switching an account onto copy-trading with a pile of
     # unrelated legacy positions. "full" closes it in one shot, which tracks
     # the master faster but risks a worse execution price on size. Which one
-    # nets out better is exactly what tools/ab_liquidation_policy.py is for —
-    # settled by continuous A/B runs, see tools/ab-tests-documentation.md:
+    # nets out better is exactly what tools/abtests/ab_liquidation_policy.py is for —
+    # settled by continuous A/B runs, see tools/abtests/ab-tests-documentation.md:
     # gradual wins in the large majority of scenarios.
     liquidation_mode: str = "gradual"
     # Share of the *currently held* lots closed per cycle under "gradual",

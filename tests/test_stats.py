@@ -1,5 +1,5 @@
 """RunningStat/MetricBag resume rebuilds exact Welford state from whatever was
-last written to JSON — tools/ab_runner.py relies on this to survive service
+last written to JSON — tools/abtests/ab_runner.py relies on this to survive service
 restarts without losing accumulated A/B statistics (see its module
 docstring). "Exact" is relative to the saved (mean, std) pair: to_dict()
 itself rounds to 4 decimals before writing, so a resume-then-continue run

@@ -27,9 +27,10 @@ mode (default), generalised from a fixed lot to a percentage of what's held so
 it scales with position size; "full" closes it in one order instead, tracking
 the master faster at the cost of whatever a single large exit does to the fill
 price. Settled by continuous A/B runs on synthetic and real price data (see
-``tools/ab_liquidation_policy.py`` and the wiki): "gradual" wins on cost in
-the large majority of scenarios, "full" only edges it out for positions
-already smaller than a day's average volume.
+``tools/abtests/ab_liquidation_policy.py`` and
+``tools/abtests/ab-tests-documentation.md``): "gradual" wins on cost in the
+large majority of scenarios, "full" only edges it out for positions already
+smaller than a day's average volume.
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
 """Mechanical smoke tests for the margin_safety A/B harness. No network here:
 simulate() takes a plain price list, so these use small crafted price paths
-instead of a real fetch — the real-data plumbing itself (tools/ab_runner.py's
+instead of a real fetch — the real-data plumbing itself (tools/abtests/ab_runner.py's
 real_basket slot) is exercised by the runner's --once smoke run, not here."""
 
 import ab_margin_safety as ab

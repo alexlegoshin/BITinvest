@@ -1,4 +1,4 @@
-"""Real candles for the `liquidation_real` A/B slot (see tools/ab_runner.py).
+"""Real candles for the `liquidation_real` A/B slot (see tools/abtests/ab_runner.py).
 
 Thin wrapper over `t_tech.invest`, same style as `broker.py`: no state, no
 retries, no rate-limiting logic here — that belongs to the caller, which knows
@@ -19,7 +19,7 @@ from t_tech.invest import CandleInterval
 
 from bitinvest.broker import money
 
-# Same six liquid MOEX tickers already used in tools/ab_cash_policy.py.
+# Same six liquid MOEX tickers already used in tools/abtests/ab_cash_policy.py.
 TICKERS = ("SBER", "GAZP", "LKOH", "MTSS", "PHOR", "ROSN")
 
 # (interval, label, min window, max window, how far back "to" may start from now)
